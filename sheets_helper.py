@@ -1,24 +1,17 @@
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+import pandas as pd
 
-def get_contacts(target, country, niche, limit, min_followers=None, max_followers=None):
-    url = {
-        "Brand": "https://docs.google.com/spreadsheets/d/1Mf6G8R6IhNaNizezHT03Nji2N4D-IVPGZk9-ZJZ1xCs/edit",
-        "Influencer": "https://docs.google.com/spreadsheets/d/1Uvs4baXysRB42M4es8fb-edRQyK8A2jtT6iogi8yNVs/edit"
-    }[target]
+def get_contacts(target, country, niche, num_to_send, min_followers, max_followers):
+    # Load CSV from GitHub
+    url = "https://raw.githubusercontent.com/awsmslmn1020/genie-ai-agent/main/influencers.csv"
+    df = pd.read_csv(url)
 
-    creds = ServiceAccountCredentials.from_json_keyfile_name("creds.json", ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"])
-    client = gspread.authorize(creds)
-    sheet = client.open_by_url(url).sheet1
-    rows = sheet.get_all_records()
+    # Filter logic (adjust column names to your actual CSV)
+    df_filtered = df[
+        (df["Target"].str.lower() == target.lower()) &
+        (df["Country"].str.lower() == country.lower()) &
+        (df["Niche"].str.lower() == niche.lower()) &
+        (df["Followers"] >= min_followers) &
+        (df["Followers"] <= max_followers)
+    ]
 
-    filtered = []
-    for row in rows:
-        if country.lower() in row['Country'].lower() and niche.lower() in row['Niche'].lower():
-            if target == "Influencer" and not (min_followers <= row['Followers'] <= max_followers):
-                continue
-            filtered.append(row)
-        if len(filtered) >= limit:
-            break
-
-    return filtered
+    return df_filtered.head(num_to_send).to_dict(orient="records")
